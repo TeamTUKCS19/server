@@ -5,6 +5,8 @@ import pathlib
 
 from flask import Flask, request, jsonify, render_template, redirect, url_for
 from pathlib import Path
+
+## 윈도우 운영체제에서 실행할 경우에는 아래 코드 한 줄 주석처리 해야 함.
 pathlib.WindowsPath = pathlib.PosixPath
 
 SAVE_DIR = '../saved_Detection'
@@ -148,4 +150,4 @@ def draw_boxes(image, results):
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=9900, debug=True)
