@@ -7,7 +7,7 @@ from flask import Flask, request, jsonify, render_template, redirect, url_for
 from pathlib import Path
 
 ## 윈도우 운영체제에서 실행할 경우에는 아래 코드 한 줄 주석처리 해야 함.
-pathlib.WindowsPath = pathlib.PosixPath
+# pathlib.WindowsPath = pathlib.PosixPath
 
 SAVE_DIR = '../saved_Detection'
 SAVE_DIR_video = '../saved_Detection_video'
@@ -150,4 +150,4 @@ def draw_boxes(image, results):
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=9900, debug=True)
+    app.run(host='172.31.24.180', port=9900, debug=True)
