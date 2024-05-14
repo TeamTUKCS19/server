@@ -6,8 +6,10 @@ import pathlib
 from flask import Flask, request, jsonify, render_template, redirect, url_for
 from pathlib import Path
 
+import s3
+
 ## 윈도우 운영체제에서 실행할 경우에는 아래 코드 한 줄 주석처리 해야 함.
-pathlib.WindowsPath = pathlib.PosixPath
+# pathlib.WindowsPath = pathlib.PosixPath
 
 SAVE_DIR = '../saved_Detection'
 SAVE_DIR_video = '../saved_Detection_video'
@@ -18,9 +20,9 @@ app = Flask(__name__)
 
 # model_path = "/app/TUKproject/flask_api/best.pt"
 model_path = "./best.pt"
-# model = torch.hub.load('../custom_yolov5', 'custom', path=model_path, source='local')
+model = torch.hub.load('../custom_yolov5', 'custom', path=model_path, source='local')
 
-model = torch.hub.load('ultralytics/yolov5', 'custom', path=model_path)
+# model = torch.hub.load('ultralytics/yolov5', 'custom', path=model_path)
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -47,6 +49,7 @@ def upload_video():
     return jsonify(frames)
 
 
+# 이미지 테스트용 함수. (비중요)
 @app.route('/upload_image', methods=['POST'])
 def upload_image():
     image_file = request.files['image']
@@ -66,8 +69,10 @@ def upload_image():
     return jsonify(output_image_path)
 
 
+# 비디오에서 특정 프레임에 맞춰서 이미지를 뽑고 그 이미지를 YOLO모델을 통해 균열 검출하는 함수
 def process_video(cap):
     frames = []
+    s3_urls = []
     fps = cap.get(cv2.CAP_PROP_FPS)  # 동영상 프레임 속도
 
     count = 0
@@ -90,6 +95,10 @@ def process_video(cap):
 
             cv2.imwrite(filepath, processed_frame)
             frames.append(filepath)
+            # upload to AWS_S3
+            s3_urls.append(s3.upload_to_s3(processed_frame,filename))
+
+
 
     output_video_path = os.path.join(SAVE_DIR_video, 'processed_video.mp4')
     create_video_from_frames(frames, output_video_path)
@@ -106,6 +115,7 @@ CLASS_MAPPING = {
 }
 
 
+# Bounding box 처리한 이미지를 합쳐서 영상으로 생성해주는 함수. ( 중요하지 않은 기능 )
 def create_video_from_frames(frames, output_video_path):
     if not frames:
         return None
@@ -134,6 +144,7 @@ COLOR_MAPPING = {
 }
 
 
+#  바운딩박스를 그려주는 함수
 def draw_boxes(image, results):
     for result in results.xyxy[0]:
         box = result[:4]  # 바운딩 박스의 좌표값 (x1, y1, x2, y2)
@@ -150,4 +161,4 @@ def draw_boxes(image, results):
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=9900, debug=True)
+    app.run(host='13.209.231.12', debug=True)
