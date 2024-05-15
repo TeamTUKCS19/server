@@ -109,5 +109,6 @@ def save_to_db(latitude, longitude, altitude, s3_url):
 
 # 13.209.231.12 : EC2_Public_IP
 # 로컬에서 실행 시 0.0.0.0 으로 바꿔주세요
+# EC2에서 실행시 인자에 port = 9900 추가해주세요
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)

@@ -1,3 +1,5 @@
+import tempfile
+
 import torch
 import cv2
 import s3
@@ -10,8 +12,9 @@ model_path = "./best.pt"
 model = torch.hub.load('../custom_yolov5', 'custom', path=model_path, source='local')
 # model = torch.hub.load('ultralytics/yolov5', 'custom', path=model_path)
 
-SAVE_DIR = '../saved_Detection'
-SAVE_DIR_video = '../saved_Detection_video'
+# SAVE_DIR = '../saved_Detection'
+SAVE_DIR = tempfile.gettempdir()
+# SAVE_DIR_video = '../saved_Detection_video'
 
 COLOR_MAPPING = {
     'Bullet_impact': (255, 0, 0),  # 파란색
