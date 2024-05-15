@@ -7,8 +7,8 @@ from flask import Flask, request, jsonify, render_template, redirect, url_for
 from pathlib import Path
 
 import work_db
-import work_yolo as y
-import db_setup
+import work_yolo as yolo
+from db_setup import db
 from flask_session import Session
 
 # 윈도우 운영체제에서 실행할 경우에는 아래 코드 한 줄 주석처리 해야 함.
@@ -21,6 +21,13 @@ app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SECRET_KEY'] = os.urandom(24)
 Session(app)
 
+# DB 초기화
+basedir = os.path.abspath(os.path.dirname(__file__))
+database_path = os.path.join(basedir, 'drones.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + database_path
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+work_db.init_db(app)
+
 
 @app.route('/', methods=['GET', 'POST'])
 def main_page():
@@ -32,26 +39,45 @@ def main_page():
     return render_template("Main_page.html")
 
 
-
 @app.route('/upload_video', methods=['POST'])
 def upload_video():
-    video_file = request.files['video']
+    try:
+        video_file = request.files['file']
+        location = {
+            'latitude': float(request.form['latitude']),
+            'longitude': float(request.form['longitude']),
+            'altitude': float(request.form['altitude'])
+        }
 
-    video_path = os.path.join(y.SAVE_DIR, 'uploaded_video.mp4')
-    video_file.save(video_path)
+        video_path = os.path.join(yolo.SAVE_DIR, 'uploaded_video.mp4')
+        video_file.save(video_path)
 
-    cap = cv2.VideoCapture(video_path)
+        cap = cv2.VideoCapture(video_path)
 
-    frames = y.process_video(cap)
-    cap.release()
-    os.remove(video_path)
+        frames = yolo.process_video(cap, location)
+        cap.release()
+    except Exception as e:
+        return str(e), 500
+    finally:
+        os.remove(video_path)
 
-    return jsonify(frames)
+    return "File uploaded and processed successfully", 200
+
+
+@app.route('/register_building', methods=['POST'])
+def register_building():
+    building_name = request.form['building_name']
+    sentence, code = work_db.register_building(db.session, building_name)
+    return sentence, code
+
 
 @app.route('/register_wall', methods=['POST'])
 # building_id, direction
-direction = request.form['direction']
-word = work_db.register_wall(session, db, Wall, direction)
+def register_wall():
+    direction = request.form['direction']
+    sentence, code = work_db.register_wall(db.session, direction)
+    return sentence, code
+
 
 # 13.209.231.12 : EC2_Public_IP
 # 로컬에서 실행 시 0.0.0.0 으로 바꿔주세요

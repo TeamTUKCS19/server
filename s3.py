@@ -41,3 +41,6 @@ def upload_to_s3(image, filename):
     )
     s3_url = f"https://{S3_BUCKET}.s3.{S3_REGION}.amazonaws.com/{filename}"
     return s3_url
+
+
+# def get_s3url(url):
