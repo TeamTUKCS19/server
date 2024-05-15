@@ -69,7 +69,7 @@ def process_video(cap, db, location):
             # s3 불필요할 때 아랫줄 주석처리.
             s3_url = s3.upload_to_s3(processed_frame, filename)
             # s3_urls.append(s3_url)
-            save_to_db(latitude , longitude, altitude, s3_url)
+            save_to_db(latitude, longitude, altitude, s3_url)
 
     # output_video_path = os.path.join(SAVE_DIR_video, 'processed_video.mp4')
     # create_video_from_frames(frames, output_video_path)
