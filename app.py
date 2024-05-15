@@ -22,6 +22,7 @@ app = Flask(__name__)
 model_path = "./best.pt"
 model = torch.hub.load('../custom_yolov5', 'custom', path=model_path, source='local')
 
+
 # model = torch.hub.load('ultralytics/yolov5', 'custom', path=model_path)
 
 
@@ -76,7 +77,8 @@ def process_video(cap):
     fps = cap.get(cv2.CAP_PROP_FPS)  # 동영상 프레임 속도
 
     count = 0
-    frame_rate = 0.1
+    # frame_rate = 1 이면, x초의 영상을 1초씩 자른다.  만약 값이 0.1일경우 영상을 0.1초씩 자른다.
+    frame_rate = 1
     interval_frames = int(fps * frame_rate)
 
     while cap.isOpened():
@@ -96,9 +98,7 @@ def process_video(cap):
             cv2.imwrite(filepath, processed_frame)
             frames.append(filepath)
             # upload to AWS_S3
-            s3_urls.append(s3.upload_to_s3(processed_frame,filename))
-
-
+            s3_urls.append(s3.upload_to_s3(processed_frame, filename))
 
     output_video_path = os.path.join(SAVE_DIR_video, 'processed_video.mp4')
     create_video_from_frames(frames, output_video_path)
@@ -125,7 +125,7 @@ def create_video_from_frames(frames, output_video_path):
 
     # 비디오 저장 객체 생성
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    out = cv2.VideoWriter(output_video_path, fourcc, 30, (width, height))  # 여기서 30은 임의의 프레임 속도입니다.
+    out = cv2.VideoWriter(output_video_path, fourcc, 30, (width, height))  # 여기서 30은 임의의 프레임 속도.
 
     for frame_path in frames:
         frame = cv2.imread(frame_path)
