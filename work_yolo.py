@@ -2,9 +2,8 @@ import torch
 import cv2
 import s3
 import os
+from app import save_to_db
 
-from work_db import save_to_db
-from db_setup import db
 # model_path = "/app/TUKproject/flask_api/best.pt"
 model_path = "./best.pt"
 
@@ -33,7 +32,7 @@ IGNORE_CLASSES = {'Bullet_impact', 'Explosion_impact'}
 
 
 # 비디오에서 특정 프레임에 맞춰서 이미지를 뽑고 그 이미지를 YOLO모델을 통해 균열 검출하는 함수
-def process_video(cap, location):
+def process_video(cap, db, location):
     frames = []
     s3_urls = []
     fps = cap.get(cv2.CAP_PROP_FPS)  # 동영상 프레임 속도
@@ -67,7 +66,7 @@ def process_video(cap, location):
             # s3 불필요할 때 아랫줄 주석처리.
             s3_url = s3.upload_to_s3(processed_frame, filename)
             # s3_urls.append(s3_url)
-            save_to_db(db.session, latitude, longitude, altitude, s3_url)
+            save_to_db(latitude , longitude, altitude, s3_url)
 
     # output_video_path = os.path.join(SAVE_DIR_video, 'processed_video.mp4')
     # create_video_from_frames(frames, output_video_path)

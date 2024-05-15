@@ -3,12 +3,12 @@ import cv2
 import torch
 import pathlib
 
-from flask import Flask, request, jsonify, render_template, redirect, url_for
+from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 from pathlib import Path
 
-import work_db
+
 import work_yolo as yolo
-from db_setup import db
+from db_setup import db, DroneData, Wall, Building, init_db
 from flask_session import Session
 
 # 윈도우 운영체제에서 실행할 경우에는 아래 코드 한 줄 주석처리 해야 함.
@@ -26,7 +26,7 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 database_path = os.path.join(basedir, 'drones.db')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + database_path
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-work_db.init_db(app)
+init_db(app)
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -41,42 +41,70 @@ def main_page():
 
 @app.route('/upload_video', methods=['POST'])
 def upload_video():
-    try:
-        video_file = request.files['file']
-        location = {
-            'latitude': float(request.form['latitude']),
-            'longitude': float(request.form['longitude']),
-            'altitude': float(request.form['altitude'])
-        }
+    video_file = request.files['file']
+    location = {
+        'latitude': float(request.form['latitude']),
+        'longitude': float(request.form['longitude']),
+        'altitude': float(request.form['altitude'])
+    }
 
-        video_path = os.path.join(yolo.SAVE_DIR, 'uploaded_video.mp4')
-        video_file.save(video_path)
+    video_path = os.path.join(yolo.SAVE_DIR, 'uploaded_video.mp4')
+    video_file.save(video_path)
 
-        cap = cv2.VideoCapture(video_path)
+    cap = cv2.VideoCapture(video_path)
 
-        frames = yolo.process_video(cap, location)
-        cap.release()
-    except Exception as e:
-        return str(e), 500
-    finally:
-        os.remove(video_path)
+    frames = yolo.process_video(cap, db, location)
+    cap.release()
+    os.remove(video_path)
 
     return "File uploaded and processed successfully", 200
 
 
+##건물 등록 엔드포인트
 @app.route('/register_building', methods=['POST'])
 def register_building():
     building_name = request.form['building_name']
-    sentence, code = work_db.register_building(db.session, building_name)
-    return sentence, code
+
+    building = Building.query.filter_by(name=building_name).first()
+
+    if not building:
+        building = Building(name=building_name)
+        db.session.add(building)
+        db.session.commit()
+
+    session['building_id'] = building.id
+    return "building registered successfully", 201
 
 
+##벽면 등록 엔드포인트
 @app.route('/register_wall', methods=['POST'])
-# building_id, direction
 def register_wall():
+    building_id = session.get('building_id')
+
     direction = request.form['direction']
-    sentence, code = work_db.register_wall(db.session, direction)
-    return sentence, code
+
+    wall = Wall.query.filter_by(direction=direction, building_id=building_id).first()
+    if not wall:
+        wall = Wall(direction=direction, building_id=building_id)
+        db.session.add(wall)
+        db.session.commit()
+
+    session['wall_id'] = wall.id
+    return "Wall registered successfully", 201
+
+
+def save_to_db(latitude, longitude, altitude, s3_url):
+    wall_id = session.get('wall_id')
+
+    new_data = DroneData(
+        wall_id=wall_id,
+        latitude=latitude,
+        longitude=longitude,
+        altitude=altitude,
+        s3_url=s3_url,
+    )
+    db.session.add(new_data)
+    db.session.commit()
 
 
 # 13.209.231.12 : EC2_Public_IP
