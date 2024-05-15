@@ -58,7 +58,8 @@ def process_video(cap):
             cv2.imwrite(filepath, processed_frame)
             frames.append(filepath)
             # upload to AWS_S3
-            s3_urls.append(s3.upload_to_s3(processed_frame, filename))
+            # s3 불필요할 때 아랫줄 주석처리.
+            # s3_urls.append(s3.upload_to_s3(processed_frame, filename))
 
     # output_video_path = os.path.join(SAVE_DIR_video, 'processed_video.mp4')
     # create_video_from_frames(frames, output_video_path)
