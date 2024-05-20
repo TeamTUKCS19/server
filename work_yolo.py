@@ -9,10 +9,12 @@ from app import save_to_db
 # model_path = "/app/TUKproject/flask_api/best.pt"
 model_path = "./best.pt"
 
+# 로컬에 custom_yolo5 다운 안받아놓았으면 아랫줄 주석 처리 후 그 아랫줄의 ultralytics/yolov5 줄의 주석 제거
 model = torch.hub.load('../custom_yolov5', 'custom', path=model_path, source='local')
 # model = torch.hub.load('ultralytics/yolov5', 'custom', path=model_path)
 
 # SAVE_DIR = '../saved_Detection'
+#임시 저장소 사용. (임시저장소에 영상을 올려놓음)
 SAVE_DIR = tempfile.gettempdir()
 # SAVE_DIR_video = '../saved_Detection_video'
 
@@ -46,7 +48,7 @@ def process_video(cap, db, location):
 
     count = 0
     # frame_rate = 1 이면, x초의 영상을 1초씩 자른다.  만약 값이 0.1일경우 영상을 0.1초씩 자른다.
-    frame_rate = 0.5
+    frame_rate = 0.3
     interval_frames = int(fps * frame_rate)
 
     while cap.isOpened():
@@ -62,14 +64,16 @@ def process_video(cap, db, location):
             filepath = os.path.join(SAVE_DIR, filename)
 
             processed_frame = draw_boxes(frame, results)
-
-            cv2.imwrite(filepath, processed_frame)
-            frames.append(filepath)
-            # upload to AWS_S3
-            # s3 불필요할 때 아랫줄 주석처리.
-            s3_url = s3.upload_to_s3(processed_frame, filename)
-            # s3_urls.append(s3_url)
-            save_to_db(latitude, longitude, altitude, s3_url)
+            if (processed_frame is None):
+                continue
+            else:
+                cv2.imwrite(filepath, processed_frame)
+                frames.append(filepath)
+                # upload to AWS_S3
+                # s3 불필요할 때 아랫줄 주석처리.
+                s3_url = s3.upload_to_s3(processed_frame, filename)
+                # s3_urls.append(s3_url)
+                save_to_db(latitude, longitude, altitude, s3_url)
 
     # output_video_path = os.path.join(SAVE_DIR_video, 'processed_video.mp4')
     # create_video_from_frames(frames, output_video_path)
@@ -80,6 +84,8 @@ def process_video(cap, db, location):
 
 # 바운딩박스를 그려주는 함수
 def draw_boxes(image, results):
+    if results is None or len(results.xyxy[0]) == 0:
+        return None
     for result in results.xyxy[0]:
         box = result[:4]  # 바운딩 박스의 좌표값 (x1, y1, x2, y2)
         label_index = int(result[5])
@@ -95,7 +101,6 @@ def draw_boxes(image, results):
         cv2.putText(image, f'{label} ({conf:.2f})', (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
     return image
-
 
 
 """

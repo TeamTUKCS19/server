@@ -1,6 +1,7 @@
 import io
 import cv2
 import boto3
+import os
 
 
 S3_REGION = 'ap-northeast-2'
@@ -43,4 +44,15 @@ def upload_to_s3(image, filename):
     return s3_url
 
 
+def download_all_files(bucket_name, local_dir):
+    paginator = s3_client.get_paginator('list_objects_v2')
+    for page in paginator.paginate(Bucket=bucket_name):
+        if 'Contents' in page:
+            for obj in page['Contents']:
+                key = obj['Key']
+                local_path = os.path.join(local_dir, key)
+                if not os.path.exists(os.path.dirname(local_path)):
+                    os.makedirs(os.path.dirname(local_path))
+                s3_client.download_file(bucket_name, key, local_path)
+                print(f"Downloaded {key} to {local_path}")
 # def get_s3url(url):
