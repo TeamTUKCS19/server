@@ -10,8 +10,8 @@ from app import save_to_db
 model_path = "./best.pt"
 
 # 로컬에 custom_yolo5 다운 안받아놓았으면 아랫줄 주석 처리 후 그 아랫줄의 ultralytics/yolov5 줄의 주석 제거
-model = torch.hub.load('../custom_yolov5', 'custom', path=model_path, source='local')
-# model = torch.hub.load('ultralytics/yolov5', 'custom', path=model_path)
+#model = torch.hub.load('../custom_yolov5', 'custom', path=model_path, source='local')
+model = torch.hub.load('ultralytics/yolov5', 'custom', path=model_path)
 
 # SAVE_DIR = '../saved_Detection'
 #임시 저장소 사용. (임시저장소에 영상을 올려놓음)
