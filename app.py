@@ -59,7 +59,7 @@ def upload():
 
         cap = cv2.VideoCapture(video_path)
 
-        frames = yolo.process_video(cap, db, location)
+        yolo.process_video2(cap, location)
         cap.release()
         os.remove(video_path)
         S3.download_all_files(S3.S3_BUCKET, local_dir)
