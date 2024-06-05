@@ -12,6 +12,13 @@ from skimage.color import rgb2gray
 from skimage.data import page
 from skimage.filters import (threshold_sauvola)
 from PIL import Image
+from skimage.morphology import skeletonize
+from skimage.util import invert
+import numpy as np
+from scipy import ndimage as ndi
+from skimage import feature
+import queue
+import math
 
 # model_path = "/app/TUKproject/flask_api/best.pt"
 model_path = "./best.pt"
@@ -105,7 +112,13 @@ def process_video2(cap, location): #균열을 검출하고 crop_crack_region 함
 
             for idx, (cropped_frame, label, conf) in enumerate(cropped_images):
                 filename = f'frame_{count}_{idx}.jpg'
-                #cropped_frame에 대해 Iamge_Binariation 진행하여 사이즈 측정
+                #cropped_frame에 대해 Iamge_Binariation 진행
+                binary_sauvola_Pw_bw, binary_sauvola_Pw = image_binaryzation(cropped_frame)
+                skeleton_Pw = img_skeletonize(binary_sauvola_Pw)
+                edges_Pw = detect_edge(binary_sauvola_Pw)
+                real_width = calculate_width(skeleton_Pw, edges_Pw)
+                risk = categorize_risk(real_width)
+
                 if cropped_frame is None:
                     continue
                 else:
@@ -113,9 +126,249 @@ def process_video2(cap, location): #균열을 검출하고 crop_crack_region 함
                     # s3 불필요할 때 아랫줄 주석처리.
                     s3_url = s3.upload_to_s3(cropped_frame, filename)
                     # s3_urls.append(s3_url)
-                    save_to_db(latitude, longitude, altitude, s3_url)
+                    save_to_db(latitude, longitude, altitude, real_width, risk, s3_url)
 
     cap.release()
+
+def image_binaryzation(cropped_frame):
+    #sauvola_frames_Pw_bw = []
+    #sauvola_frames_Pw = []
+
+    img_gray = rgb2gray(cropped_frame)
+
+    window_size_Pw = 71
+    thresh_sauvola_Pw = threshold_sauvola(img_gray, window_size=window_size_Pw, k=0.42)
+
+    binary_sauvola_Pw = img_gray > thresh_sauvola_Pw
+    binary_sauvola_Pw_bw = img_gray > thresh_sauvola_Pw
+
+    binary_sauvola_Pw_bw.dtype = 'uint8'
+    binary_sauvola_Pw_bw *= 255
+
+    #sauvola_frames_Pw_bw.append(binary_sauvola_Pw_bw)
+    #sauvola_frames_Pw.append(binary_sauvola_Pw)
+
+    return binary_sauvola_Pw_bw, binary_sauvola_Pw
+
+def img_skeletonize(sauvola_frames_Pw):
+    #skeleton_frames_Pw = []
+
+    img_Pw = invert(sauvola_frames_Pw)
+    skeleton_Pw = skeletonize(img_Pw)
+    skeleton_Pw.dtype = 'uint8'
+    skeleton_Pw *= 255
+
+    #skeleton_frames_Pw.append(skeleton_Pw)
+
+    return skeleton_Pw
+
+def detect_edge(sauvola_frames_Pw):
+    #edges_frames_Pw = []
+    #edges_frames_Pl = []
+
+    edges_Pw = feature.canny(sauvola_frames_Pw, 0.09)
+    edges_Pw.dtype = 'uint8'
+    edges_Pw *= 255
+
+    #edges_frames_Pw.append(edges_Pw)
+
+    return edges_Pw
+
+def calculate_width(skeleton_frames_Pw, edges_frames_Pw):
+    dx_dir_right = [-5, -5, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 5]
+    dy_dir_right = [0, 1, 2, 3, 4, 5, 5, 5, 5, 5, 4, 3, 2, 1]
+
+    dx_dir_left = [5, 5, 5, 4, 3, 2, 1, 0, -1, -2, -3, -4, -5, -5]
+    dy_dir_left = [0, -1, -2, -3, -4, -5, -5, -5, -5, -5, -4, -3, -2, -1]
+
+    dx_bfs = [-1, -1, 0, 1, 1, 1, 0, -1]
+    dy_bfs = [0, 1, 1, 1, 0, -1, -1, -1]
+
+    start=[0,0]
+    next = []
+    q = queue.Queue()
+    q.put(start)
+
+    len_x = skeleton_frames_Pw.shape[0]
+    len_y = skeleton_frames_Pw.shape[1]
+
+    visit = np.zeros((len_x, len_y))
+    crack_width_list = []
+
+    # Skeleton pixel 로부터 균열의 진행 방향을 찾아냄
+    while(q.empty() == 0):
+        next = q.get()
+        x = next[0]
+        y = next[1]
+        right_x = right_y = left_x = left_y = -1
+
+        if(skeleton_frames_Pw[x][y] == 255):
+            #skeleton을 바탕으로 균열의 진행 방향을 구함
+            for i in range(0, len(dx_dir_right)):
+                right_x = x + dx_dir_right[i]
+                right_y = y + dy_dir_right[i]
+                if (right_x < 0 or right_y < 0 or right_x >= len_x or right_y >= len_y):
+                    right_x = right_y = -1
+                    continue
+
+                if (skeleton_frames_Pw[right_x][right_y] == 255): break;
+                if (i == 13): right_x = right_y = -1
+
+            if (right_x == -1):
+                right_x = x
+                right_y = y
+
+            for i in range(0, len(dx_dir_left)):
+                left_x = x + dx_dir_left[i]
+                left_y = y + dy_dir_left[i]
+                if (left_x < 0 or left_y < 0 or left_x >= len_x or left_y >= len_y):
+                    left_x = left_y = -1
+                    continue
+                if (skeleton_frames_Pw[left_x][left_y] == 255): break
+                if (i == 13): left_x = left_y = -1
+
+            if (left_x == -1):
+                left_x = x
+                left_y = y
+
+            # acos 공식을 바탕으로 균열의 진행 방향을 각도(theta)로 나타냄
+            base = right_y - left_y
+            height = right_x - left_x
+            hypotenuse = math.sqrt(base * base + height * height)
+
+            if (base == 0 and height != 0):
+                theta = 90.0
+            elif (base == 0 and height == 0):
+                continue
+            else:
+                theta = math.degrees(math.acos((base * base + hypotenuse * hypotenuse - height * height) / (2.0 * base * hypotenuse)))
+
+            theta += 90
+            dist = 0
+
+            # 균열 진행 방향의 수직선과 Edge가 만나면, 그 거리를 구함
+            for i in range(0, 2):
+                pix_x = x
+                pix_y = y
+                if (theta > 360):
+                    theta -= 360
+                elif (theta < 0):
+                    theta += 360
+
+                if (theta == 0.0 or theta == 360.0):
+                    while (1):
+                        pix_y += 1
+                        if (pix_y >= len_y):
+                            pix_x = x
+                            pix_y = y
+                            break
+                        if (edges_frames_Pw[pix_x][pix_y] == 255): break
+
+                elif (theta == 90.0):
+                    while (1):
+                        pix_x -= 1
+                        if (pix_x < 0):
+                            pix_x = x
+                            pix_y = y
+                            break
+                        if (edges_frames_Pw[pix_x][pix_y] == 255): break
+
+                elif (theta == 180.0):
+                    while (1):
+                        pix_y -= 1
+                        if (pix_y < 0):
+                            pix_x = x
+                            pix_y = y
+                            break
+                        if (edges_frames_Pw[pix_x][pix_y] == 255): break
+
+                elif (theta == 270.0):
+                    while (1):
+                        pix_x += 1
+                        if (pix_x >= len_x):
+                            pix_x = x
+                            pix_y = y
+                            break
+                        if (edges_frames_Pw[pix_x][pix_y] == 255): break
+                else:
+                    a = 1
+                    radian = math.radians(theta)
+                    while(1):
+                        pix_x = x - round(a * math.sin(radian))
+                        pix_y = y + round(a * math.cos(radian))
+                        if (pix_x < 0 or pix_y < 0 or pix_x >= len_x or pix_y >= len_y):
+                            pix_x = x
+                            pix_y = y
+                            break
+                        if (edges_frames_Pw[pix_x][pix_y] == 255): break
+
+                        if (theta > 0 and theta < 90):
+                            if (pix_y + 1 < len_y and edges_frames_Pw[pix_x][pix_y + 1] == 255):
+                                pix_y += 1
+                                break
+                            if (pix_x - 1 >= 0 and edges_frames_Pw[pix_x - 1][pix_y] == 255):
+                                pix_x -= 1
+                                break
+
+                        elif (theta > 90 and theta < 180):
+                            if (pix_y - 1 >= 0 and edges_frames_Pw[pix_x][pix_y - 1] == 255):
+                                pix_y -= 1
+                                break
+                            if (pix_x - 1 >= 0 and edges_frames_Pw[pix_x - 1][pix_y] == 255):
+                                pix_x -= 1
+                                break
+
+                        elif (theta > 180 and theta < 270):
+                            if (pix_y - 1 >= 0 and edges_frames_Pw[pix_x][pix_y - 1] == 255):
+                                pix_y -= 1
+                                break
+                            if (pix_x + 1 < len_x and edges_frames_Pw[pix_x + 1][pix_y] == 255):
+                                pix_x += 1
+                                break
+
+                        elif (theta > 270 and theta < 360):
+                            if (pix_y + 1 < len_y and edges_frames_Pw[pix_x][pix_y + 1] == 255):
+                                pix_y += 1
+                                break
+                            if (pix_x + 1 < len_x and edges_frames_Pw[pix_x + 1][pix_y] == 255):
+                                pix_x += 1
+                                break
+                        a += 1
+
+                dist += math.sqrt((y - pix_y) ** 2 + (x - pix_x) ** 2)
+                theta += 180
+
+            #균열의 폭을 저장
+            crack_width_list.append(dist)
+
+        for i in range(0, 8):
+            next_x = x + dx_bfs[i]
+            next_y = y + dy_bfs[i]
+
+            if (next_x < 0 or next_y < 0 or next_x >= len_x or next_y >= len_y): continue
+            if (visit[next_x][next_y] == 0):
+                q.put([next_x, next_y])
+                visit[next_x][next_y] = 1
+
+    crack_width_list.sort(reverse=True)
+
+    # 실제의 길이로 변환
+    if (len(crack_width_list) == 0):
+        real_width = 0
+    elif (len(crack_width_list) < 10):
+        real_width = round(crack_width_list[len(crack_width_list) - 1] * 0.92, 2)
+    else:
+        real_width = round(crack_width_list[9] * 0.92, 2)
+
+    return real_width
+
+def categorize_risk(real_width):
+    if(real_width >= 0.3):
+        return 2
+    elif(real_width < 0.3 and real_width >= 0.2):
+        return 1
+    else:
+        return 0
 
 def crop_crack_region(frame, results): #균열이 검출된 영역을 잘라내는 함수
     cropped_images = []

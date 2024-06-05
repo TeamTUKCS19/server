@@ -125,7 +125,7 @@ def register_wall():
         return "Wall registered successfully", 201
 
 
-def save_to_db(latitude, longitude, altitude, s3_url):
+def save_to_db(latitude, longitude, altitude, width, risk, s3_url):
     # wall_id = session.get('wall_id')
     # wall_id = 1
     wall = Wall.query.order_by(Wall.id.desc()).first()
@@ -136,6 +136,8 @@ def save_to_db(latitude, longitude, altitude, s3_url):
         latitude=latitude,
         longitude=longitude,
         altitude=altitude,
+        width = width,
+        risk = risk,
         s3_url=s3_url,
     )
     db.session.add(new_data)

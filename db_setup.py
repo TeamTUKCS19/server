@@ -25,6 +25,8 @@ class DroneData(db.Model):
     latitude = db.Column(db.Float, nullable=False)
     longitude = db.Column(db.Float, nullable=False)
     altitude = db.Column(db.Float, nullable=False)
+    width = db.Column(db.Float, nullable=False)
+    risk = db.Column(db.Integer, nullable=False)
     s3_url = db.Column(db.String(255), nullable=False)
 
 
