@@ -1,5 +1,5 @@
 import tempfile
-from server.s3 import s3
+from s3 import s3
 from app import save_to_db
 from ultralytics import YOLO
 from cal_crack import calculate_crack as cal
