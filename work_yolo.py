@@ -38,10 +38,8 @@ def process_video(cap, location):
         ret, frame = cap.read()
         if not ret:
             break
-        if spelling > 'z':
-            spelling = 'A'
-        else:
-            spelling += 1
+
+        spelling = chr(ord(spelling) + 1) if spelling < 'z' else 'A'
 
         if count % interval_frames == 0:
             # frame 은 하나의 image file
