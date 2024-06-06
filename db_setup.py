@@ -27,7 +27,8 @@ class DroneData(db.Model):
     altitude = db.Column(db.Float, nullable=False)
     width = db.Column(db.Float, nullable=False)
     risk = db.Column(db.Integer, nullable=False)
-    s3_url = db.Column(db.String(255), nullable=False)
+    s3_url_cropped = db.Column(db.String(255), nullable=False)
+    s3_url_bbox = db.Column(db.String(255), nullable=False)
 
 
 def init_db(app):

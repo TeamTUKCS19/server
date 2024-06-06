@@ -1,19 +1,15 @@
 import os
 import cv2
-import torch
-import pathlib
 
-from flask import Flask, request, jsonify, render_template, redirect, url_for, session
-from pathlib import Path
-
+from flask import Flask, request, render_template, redirect, url_for, session
 
 import work_yolo as yolo
 from db_setup import db, DroneData, Wall, Building, init_db
 from flask_session import Session
-import s3 as S3
+from s3 import s3
 
-#윈도우 운영체제에서 실행할 경우에는 아래 코드 한 줄 주석처리 해야 함.
-#pathlib.WindowsPath = pathlib.PosixPath
+# 윈도우 운영체제에서 실행할 경우에는 아래 코드 한 줄 주석처리 해야 함.
+# pathlib.WindowsPath = pathlib.PosixPath
 
 app = Flask(__name__)
 
@@ -40,7 +36,6 @@ def main_page():
     return render_template("Main_page.html")
 
 
-
 @app.route('/upload', methods=['POST'])
 def upload():
     if 'file' not in request.files:
@@ -59,10 +54,10 @@ def upload():
 
         cap = cv2.VideoCapture(video_path)
 
-        yolo.process_video2(cap, location)
+        yolo.process_video(cap, location)
         cap.release()
         os.remove(video_path)
-        S3.download_all_files(S3.S3_BUCKET, local_dir)
+        s3.download_all_files(s3.S3_BUCKET, local_dir)
         return 'File uploaded successfully', 200
 
 
@@ -80,10 +75,10 @@ def upload_video():
 
     cap = cv2.VideoCapture(video_path)
 
-    frames = yolo.process_video(cap, db, location)
+    frames = yolo.process_video(cap, location)
     cap.release()
     os.remove(video_path)
-    S3.download_all_files(S3.S3_BUCKET,local_dir)
+    s3.download_all_files(s3.S3_BUCKET, local_dir)
     return "File uploaded and processed successfully", 200
 
 
@@ -103,7 +98,7 @@ def register_building():
     return "building registered successfully", 201
 
 
-##벽면 등록 엔드포인트
+# 벽면 등록 엔드포인트
 @app.route('/register_wall', methods=['POST'])
 def register_wall():
     building_id = session.get('building_id')
@@ -119,13 +114,13 @@ def register_wall():
     session['wall_id'] = wall.id
     temp_wall_id = session.get('wall_id')
     print(temp_wall_id)
-    if(session.get('wall_id') == None):
+    if session.get('wall_id') is None:
         return "wall bad request", 400
     else:
         return "Wall registered successfully", 201
 
 
-def save_to_db(latitude, longitude, altitude, width, risk, s3_url):
+def save_to_db(latitude, longitude, altitude, width, risk, s3_url_cropped, s3_url_bbox):
     # wall_id = session.get('wall_id')
     # wall_id = 1
     wall = Wall.query.order_by(Wall.id.desc()).first()
@@ -136,9 +131,10 @@ def save_to_db(latitude, longitude, altitude, width, risk, s3_url):
         latitude=latitude,
         longitude=longitude,
         altitude=altitude,
-        width = width,
-        risk = risk,
-        s3_url=s3_url,
+        width=width,
+        risk=risk,
+        s3_url_cropped=s3_url_cropped,
+        s3_url_bbox=s3_url_bbox,
     )
     db.session.add(new_data)
     db.session.commit()
