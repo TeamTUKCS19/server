@@ -1,4 +1,4 @@
-# YOLOv5 requirements
+# YOLOv8 requirements
 # Usage: pip install -r requirements.txt
 
 # Base ------------------------------------------------------------------------
@@ -19,6 +19,7 @@ ultralytics>=8.0.232
 flask_session >= 0.8.0
 boto3 >= 1.34.104
 flask_sqlalchemy >= 3.1.1
+scikit-image >= 0.20.0
 
 # protobuf<=3.20.1  # https://github.com/ultralytics/yolov5/issues/8012
 
