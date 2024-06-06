@@ -2,11 +2,10 @@ import os
 import cv2
 
 from flask import Flask, request, render_template, redirect, url_for, session
-
-import work_yolo as yolo
 from db_setup import db, DroneData, Wall, Building, init_db
+import work_yolo as yolo
 from flask_session import Session
-from s3 import s3
+from server import s3_work
 
 # 윈도우 운영체제에서 실행할 경우에는 아래 코드 한 줄 주석처리 해야 함.
 # pathlib.WindowsPath = pathlib.PosixPath
@@ -57,7 +56,7 @@ def upload():
         yolo.process_video(cap, location)
         cap.release()
         os.remove(video_path)
-        s3.download_all_files(s3.S3_BUCKET, local_dir)
+        download_all_files(s3_work.S3_BUCKET, local_dir)
         return 'File uploaded successfully', 200
 
 
@@ -69,8 +68,10 @@ def upload_video():
         'longitude': float(request.form['longitude']),
         'altitude': float(request.form['altitude'])
     }
-
+    # test code
+    test_video = '../segmentation/crack_E.mp4'
     video_path = os.path.join(yolo.SAVE_DIR, 'uploaded_video.mp4')
+    # video_path = os.path.join(yolo.SAVE_DIR, 'uploaded_video.mp4')
     video_file.save(video_path)
 
     cap = cv2.VideoCapture(video_path)
@@ -78,11 +79,11 @@ def upload_video():
     frames = yolo.process_video(cap, location)
     cap.release()
     os.remove(video_path)
-    s3.download_all_files(s3.S3_BUCKET, local_dir)
+    download_all_files(s3_work.S3_BUCKET, local_dir)
     return "File uploaded and processed successfully", 200
 
 
-##건물 등록 엔드포인트
+# 건물 등록 엔드포인트
 @app.route('/register_building', methods=['POST'])
 def register_building():
     building_name = request.form['building_name']
@@ -142,8 +143,23 @@ def save_to_db(latitude, longitude, altitude, width, risk, s3_url_cropped, s3_ur
 
 local_dir = '../saved_Detection'
 
+
+def download_all_files(bucket_name, local):
+    paginator = s3_work.s3_client.get_paginator('list_objects_v2')
+    for page in paginator.paginate(Bucket=bucket_name):
+        if 'Contents' in page:
+            for obj in page['Contents']:
+                key = obj['Key']
+                local_path = os.path.join(local, key)
+                if not os.path.exists(os.path.dirname(local_path)):
+                    os.makedirs(os.path.dirname(local_path))
+                s3_work.s3_client.download_file(bucket_name, key, local_path)
+                print(f"Downloaded {key} to {local_path}")
+
+# def get_s3url(url):
 # 13.209.231.12 : EC2_Public_IP
 # 로컬에서 실행 시 0.0.0.0 으로 바꿔주세요
 # EC2에서 실행시 인자에 port = 9900 추가해주세요
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=9900, debug=True)
+

@@ -1,5 +1,5 @@
 .idea/
-s3/S3_Secret.py
+s3_secret.py
 drones.db
 *.pyc
 __pycache__/
