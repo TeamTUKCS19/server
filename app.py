@@ -3,9 +3,10 @@ import cv2
 
 from flask import Flask, request, render_template, redirect, url_for, session
 from db_setup import db, DroneData, Wall, Building, init_db
-import work_yolo as yolo
+
 from flask_session import Session
-from server import s3_work
+import s3_work
+import work_yolo as yolo
 
 # 윈도우 운영체제에서 실행할 경우에는 아래 코드 한 줄 주석처리 해야 함.
 # pathlib.WindowsPath = pathlib.PosixPath
