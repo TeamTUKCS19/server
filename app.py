@@ -157,10 +157,10 @@ def download_all_files(bucket_name, local):
                 s3_work.s3_client.download_file(bucket_name, key, local_path)
                 print(f"Downloaded {key} to {local_path}")
 
+
 # def get_s3url(url):
 # 13.209.231.12 : EC2_Public_IP
 # 로컬에서 실행 시 0.0.0.0 으로 바꿔주세요
 # EC2에서 실행시 인자에 port = 9900 추가해주세요
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=9900, debug=True)
-
