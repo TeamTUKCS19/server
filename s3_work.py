@@ -1,7 +1,11 @@
 import io
 import cv2
 import boto3
-from S3_secret import S3_SECRET, S3_KEY
+
+from S3_Secret import S3_SECRET, S3_KEY
+
+from S3_Secret import S3_SECRET, S3_KEY
+
 
 S3_REGION = 'ap-northeast-2'
 S3_BUCKET = 'crack-detected-data'

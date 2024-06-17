@@ -1,8 +1,10 @@
 import tempfile
-# from app import save_to_db
+
 from ultralytics import YOLO
+
+from app import save_to_db
 import cv2
-from server import s3_work
+import s3_work
 import os
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 import calculate_crack as cal
@@ -78,9 +80,9 @@ def process_video(cap, location):
                                 # upload to AWS_S3
                                 # s3 불필요할 때 아랫줄 주석처리.
                                 s3_url_cropped = s3_work.upload_to_s3(cropped_frame, filename_cropped)
-                                # s3_url_bbox = s3_work.upload_to_s3(processed_frame, filename_bbox)
+                                s3_url_bbox = s3_work.upload_to_s3(processed_frame, filename_bbox)
                                 # s3_urls.append(s3_url)
-                                # save_to_db(latitude, longitude, altitude, real_width, risk, s3_url_cropped, s3_url_bbox)
+                                save_to_db(latitude, longitude, altitude, real_width, risk, s3_url_cropped, s3_url_bbox)
                         # cropped_image = crop_crack_region(frame, results)
                 s3_url_bbox = s3_work.upload_to_s3(processed_frame, filename_bbox)
     cap.release()

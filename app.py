@@ -3,9 +3,10 @@ import cv2
 
 from flask import Flask, request, render_template, redirect, url_for, session
 from db_setup import db, DroneData, Wall, Building, init_db
-import work_yolo as yolo
+
 from flask_session import Session
-from server import s3_work
+import s3_work
+import work_yolo as yolo
 
 # 윈도우 운영체제에서 실행할 경우에는 아래 코드 한 줄 주석처리 해야 함.
 # pathlib.WindowsPath = pathlib.PosixPath
@@ -156,10 +157,10 @@ def download_all_files(bucket_name, local):
                 s3_work.s3_client.download_file(bucket_name, key, local_path)
                 print(f"Downloaded {key} to {local_path}")
 
+
 # def get_s3url(url):
 # 13.209.231.12 : EC2_Public_IP
 # 로컬에서 실행 시 0.0.0.0 으로 바꿔주세요
 # EC2에서 실행시 인자에 port = 9900 추가해주세요
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=9900, debug=True)
-
