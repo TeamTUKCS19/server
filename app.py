@@ -8,6 +8,7 @@ from flask_session import Session
 import s3_work
 import work_yolo as yolo
 
+
 # 윈도우 운영체제에서 실행할 경우에는 아래 코드 한 줄 주석처리 해야 함.
 # pathlib.WindowsPath = pathlib.PosixPath
 
@@ -24,6 +25,7 @@ database_path = os.path.join(basedir, 'drones.db')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + database_path
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 init_db(app)
+
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -164,3 +166,4 @@ def download_all_files(bucket_name, local):
 # EC2에서 실행시 인자에 port = 9900 추가해주세요
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=9900, debug=True)
+
