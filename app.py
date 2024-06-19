@@ -1,8 +1,8 @@
 import os
 import cv2
 
-from flask import Flask, request, render_template, redirect, url_for, session
-from db_setup import db, Wall, Building, init_db
+from flask import Flask, request, render_template, redirect, url_for, session, jsonify
+from db_setup import db, Wall, Building, DroneData, init_db
 
 from flask_session import Session
 import s3_work
@@ -121,6 +121,25 @@ def register_wall():
     else:
         return "Wall registered successfully", 201
 
+
+@app.route('/drone_data', methods=['GET'])
+def get_drone_data_by_name_and_direction():
+    building_name = request.args.get('building_name')
+    wall_direction = request.args.get('wall_direction')
+
+    drone_data = DroneData.query \
+        .join(Wall, Wall.id == DroneData.wall_id) \
+        .join(Building, Building.id == Wall.building_id) \
+        .filter(Building.name == building_name, Wall.direction == wall_direction) \
+        .all()
+
+    results = [{
+        'latitude': data.latitude,
+        'longitude': data.longitude,
+        'altitude': data.altitude
+    } for data in drone_data]
+
+    return jsonify(results)
 
 local_dir = '../saved_Detection'
 
