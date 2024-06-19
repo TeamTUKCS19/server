@@ -35,3 +35,23 @@ def init_db(app):
     db.init_app(app)
     with app.app_context():
         db.create_all()
+
+
+def save_to_db(latitude, longitude, altitude, width, risk, s3_url_cropped, s3_url_bbox):
+    # wall_id = session.get('wall_id')
+    # wall_id = 1
+    wall = Wall.query.order_by(Wall.id.desc()).first()
+
+    print(wall.id)
+    new_data = DroneData(
+        wall_id=wall.id,
+        latitude=latitude,
+        longitude=longitude,
+        altitude=altitude,
+        width=width,
+        risk=risk,
+        s3_url_cropped=s3_url_cropped,
+        s3_url_bbox=s3_url_bbox,
+    )
+    db.session.add(new_data)
+    db.session.commit()
