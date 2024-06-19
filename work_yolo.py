@@ -59,10 +59,10 @@ def process_video(cap, location):
     }
 
     side = {
-        'E': 1,
-        'W': 2,
-        'S': 3,
-        'N': 4,
+        'East': 1,
+        'West': 2,
+        'South': 3,
+        'North': 4,
     }
 
     count = 0
@@ -89,11 +89,15 @@ def process_video(cap, location):
                 processed_frame = draw_boxes(frame, bboxes)
 
                 frame_number += 1
+
                 for i, bbox in enumerate(bboxes):
                     if processed_frame is None:
                         continue
                     else:
+
                         filename_bbox = f'frame_{frame_number}.jpg'
+                        s3_url_bbox = s3_work.upload_to_s3(processed_frame, filename_bbox)
+
                         cropped_images = cal.crop_crack_region(frame, bbox)
                         if not cropped_images:
                             continue
@@ -112,21 +116,21 @@ def process_video(cap, location):
                                 # upload to AWS_S3
                                 # s3 불필요할 때 아랫줄 주석처리.
                                 building_id = 'E'
-                                side_id = 'S'
+                                side_id = 'South'
                                 crack_id = f'{building[building_id]}{side[side_id]}{date}{frame_number}{i}'
 
                                 s3_url_cropped = s3_work.upload_to_s3(cropped_frame, filename_cropped)
-                                s3_url_bbox = s3_work.upload_to_s3(processed_frame, filename_bbox)
+
 
                                 # db에 데이터 삽입
-                                sql.insert_building(conn, cursor, building[building_id], side[side_id], real_width, risk, crack_id, formatted_date)
+                                sql.insert_building(conn, cursor, building_id, side_id, real_width, risk, crack_id, formatted_date)
                                 sql.insert_location(conn, cursor, crack_id, latitude, longitude, altitude)
                                 sql.insert_crackURL(conn, cursor, crack_id, s3_url_cropped, s3_url_bbox)
 
                                 # s3_urls.append(s3_url)
                                 # save_to_db(latitude, longitude, altitude, real_width, risk, s3_url_cropped, s3_url_bbox)
                         # cropped_image = crop_crack_region(frame, results)
-                s3_url_bbox = s3_work.upload_to_s3(processed_frame, filename_bbox)
+                    # s3_url_bbox = s3_work.upload_to_s3(processed_frame, filename_bbox)
     cursor.close()
     conn.close()
     cap.release()
