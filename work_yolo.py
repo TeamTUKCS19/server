@@ -2,7 +2,7 @@ import tempfile
 
 from ultralytics import YOLO
 
-from app import save_to_db
+from db_setup import save_to_db
 import cv2
 import s3_work
 import os
