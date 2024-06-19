@@ -36,7 +36,7 @@ SAVE_DIR = tempfile.gettempdir()
 # 오늘 날짜 불러오기
 current_date = datetime.date.today()
 current_hour_min = datetime.datetime.now().strftime('%H%M')
-month_date = current_date.strftime('%m%d')
+date = current_date.strftime('%d')
 formatted_date = current_date.strftime('%Y-%m-%d')
 
 
@@ -113,7 +113,7 @@ def process_video(cap, location):
                                 # s3 불필요할 때 아랫줄 주석처리.
                                 building_id = 'E'
                                 side_id = 'S'
-                                crack_id = f'{building[building_id]}{side[side_id]}{risk}{month_date}{current_hour_min}{frame_number}{i}'
+                                crack_id = f'{building[building_id]}{side[side_id]}{date}{frame_number}{i}'
 
                                 s3_url_cropped = s3_work.upload_to_s3(cropped_frame, filename_cropped)
                                 s3_url_bbox = s3_work.upload_to_s3(processed_frame, filename_bbox)
