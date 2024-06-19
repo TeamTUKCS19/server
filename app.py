@@ -3,11 +3,13 @@ import cv2
 
 from flask import Flask, request, render_template, redirect, url_for, session, jsonify
 from db_setup import db, Wall, Building, DroneData, init_db
+import pymysql
 
 from flask_session import Session
 import s3_work
 import work_yolo as yolo
 import pathlib
+import mysql
 
 # 윈도우 운영체제에서 실행할 경우에는 아래 코드 한 줄 주석처리 해야 함.
 # pathlib.WindowsPath = pathlib.PosixPath
@@ -19,13 +21,40 @@ app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SECRET_KEY'] = os.urandom(24)
 Session(app)
 
+# mysql 연동 정보
+
+
+'''
 # DB 초기화
 basedir = os.path.abspath(os.path.dirname(__file__))
 database_path = os.path.join(basedir, 'drones.db')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + database_path
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 init_db(app)
+'''
 
+
+# DB와 연결
+def connect_RDS():
+    conn = None
+    host = "crack-mysql.cjiec444ylcd.ap-northeast-2.rds.amazonaws.com"
+    port = 3306
+    username = "admin"
+    database = "crack_database"
+    password = "teamtukcs19"
+
+    try:
+        conn = pymysql.connect(host=host, user=username, passwd=password, db=database, port=port, use_unicode=True,
+                               charset='utf8')
+
+        print("Connecting to RDS is Success")
+    except pymysql.Error as e:
+        print(f"Error connecting to MySQL: {e}")
+
+    return conn
+
+
+conn = connect_RDS()
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -56,7 +85,7 @@ def upload():
 
         cap = cv2.VideoCapture(video_path)
 
-        yolo.process_video(cap, location)
+        yolo.process_video(cap, location, conn)
         cap.release()
         os.remove(video_path)
         download_all_files(s3_work.S3_BUCKET, local_dir)
@@ -143,7 +172,27 @@ def get_drone_data_by_name_and_direction():
 
     return jsonify(results)
 
+
 local_dir = '../saved_Detection'
+
+
+@app.route('/get_location', methods=['POST'])
+def get_location():
+    building = request.form['building']
+    side = request.form['side']
+    print(building)
+    print(side)
+    crack_id = f'{building}{side}'
+    print(crack_id)
+    results = mysql.get_location(conn, crack_id)
+
+    if results is None:
+        return "No data found", 404
+
+    for result in results:
+        print(result)
+
+    return jsonify(results)
 
 
 def download_all_files(bucket_name, local):
@@ -165,4 +214,3 @@ def download_all_files(bucket_name, local):
 # EC2에서 실행시 인자에 port = 9900 추가해주세요
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=9900, debug=True)
-

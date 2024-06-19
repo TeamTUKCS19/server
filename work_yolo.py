@@ -12,6 +12,8 @@ import mysql as sql
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 import calculate_crack as cal
 
+
+"""
 # mysql 연동 정보
 Host = "crack-mysql.cjiec444ylcd.ap-northeast-2.rds.amazonaws.com"
 Port = 3306
@@ -20,6 +22,8 @@ Database = "crack_database"
 Password = "teamtukcs19"
 
 conn, cursor = sql.connect_RDS(Host, Username, Password, Database, Port)
+
+"""
 
 # model_path = "/app/TUKproject/flask_api/best.pt"
 model_path = "weight/yolov8s_best2.pt"
@@ -44,8 +48,11 @@ formatted_date = current_date.strftime('%Y-%m-%d')
 
 
 # 비디오에서 특정 프레임에 맞춰서 이미지를 뽑고 그 이미지를 YOLO모델을 통해 균열 검출하는 함수
-def process_video(cap, location):
+def process_video(cap, location, conn):
     fps = cap.get(cv2.CAP_PROP_FPS)  # 동영상 프레임 속도
+
+    # DB와 연결한 conn 객체의 cursor
+    cursor = conn.cursor()
 
     latitude = location['latitude']
     longitude = location['longitude']
