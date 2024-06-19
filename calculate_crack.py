@@ -255,7 +255,7 @@ def categorize_risk(real_width):
 
 
 # result 값으로는 균열 하나에 대한 boxes 값이 들어온다.
-def crop_crack_region(frame, result):  # 균열이 검출된 영역을 잘라내는 함수
+def     crop_crack_region(frame, result):  # 균열이 검출된 영역을 잘라내는 함수
     cropped_images = []
     if result is None:  # 예외 처리
         return None

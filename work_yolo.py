@@ -2,12 +2,24 @@ import tempfile
 
 from ultralytics import YOLO
 
-from db_setup import save_to_db
 import cv2
 import s3_work
 import os
+import datetime
+import mysql as sql
+
+
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 import calculate_crack as cal
+
+# mysql 연동 정보
+Host = "crack-mysql.cjiec444ylcd.ap-northeast-2.rds.amazonaws.com"
+Port = 3306
+Username = "admin"
+Database = "crack_database"
+Password = "teamtukcs19"
+
+conn, cursor = sql.connect_RDS(Host, Username, Password, Database, Port)
 
 # model_path = "/app/TUKproject/flask_api/best.pt"
 model_path = "weight/yolov8s_best2.pt"
@@ -21,6 +33,12 @@ model = YOLO(model_path)
 # 임시 저장소 사용. (임시저장소에 영상을 올려놓음)
 SAVE_DIR = tempfile.gettempdir()
 
+# 오늘 날짜 불러오기
+current_date = datetime.date.today()
+current_hour_min = datetime.datetime.now().strftime('%H%M')
+date = current_date.strftime('%d')
+formatted_date = current_date.strftime('%Y-%m-%d')
+
 
 # SAVE_DIR_video = '../saved_Detection_video'
 
@@ -32,6 +50,20 @@ def process_video(cap, location):
     latitude = location['latitude']
     longitude = location['longitude']
     altitude = location['altitude']
+    building = {
+        'A': 1,
+        'B': 2,
+        'C': 3,
+        'D': 4,
+        'E': 5,
+    }
+
+    side = {
+        'East': 1,
+        'West': 2,
+        'South': 3,
+        'North': 4,
+    }
 
     count = 0
     spelling = 'A'
@@ -57,11 +89,15 @@ def process_video(cap, location):
                 processed_frame = draw_boxes(frame, bboxes)
 
                 frame_number += 1
+
                 for i, bbox in enumerate(bboxes):
                     if processed_frame is None:
                         continue
                     else:
+
                         filename_bbox = f'frame_{frame_number}.jpg'
+                        s3_url_bbox = s3_work.upload_to_s3(processed_frame, filename_bbox)
+
                         cropped_images = cal.crop_crack_region(frame, bbox)
                         if not cropped_images:
                             continue
@@ -79,12 +115,24 @@ def process_video(cap, location):
                             else:
                                 # upload to AWS_S3
                                 # s3 불필요할 때 아랫줄 주석처리.
+                                building_id = 'E'
+                                side_id = 'South'
+                                crack_id = f'{building[building_id]}{side[side_id]}{date}{frame_number}{i}'
+
                                 s3_url_cropped = s3_work.upload_to_s3(cropped_frame, filename_cropped)
-                                s3_url_bbox = s3_work.upload_to_s3(processed_frame, filename_bbox)
+
+
+                                # db에 데이터 삽입
+                                sql.insert_building(conn, cursor, building_id, side_id, real_width, risk, crack_id, formatted_date)
+                                sql.insert_location(conn, cursor, crack_id, latitude, longitude, altitude)
+                                sql.insert_crackURL(conn, cursor, crack_id, s3_url_cropped, s3_url_bbox)
+
                                 # s3_urls.append(s3_url)
-                                save_to_db(latitude, longitude, altitude, real_width, risk, s3_url_cropped, s3_url_bbox)
+                                # save_to_db(latitude, longitude, altitude, real_width, risk, s3_url_cropped, s3_url_bbox)
                         # cropped_image = crop_crack_region(frame, results)
-                s3_url_bbox = s3_work.upload_to_s3(processed_frame, filename_bbox)
+                    # s3_url_bbox = s3_work.upload_to_s3(processed_frame, filename_bbox)
+    cursor.close()
+    conn.close()
     cap.release()
 
 
@@ -102,6 +150,7 @@ def draw_boxes(image, results):
         cv2.rectangle(image, (x1, y1), (x2, y2), color, 2)
         cv2.putText(image, f'{label} ({conf:.2f})', (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
     return image
+
 
 
 # test_code
