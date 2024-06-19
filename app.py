@@ -7,7 +7,7 @@ from db_setup import db, DroneData, Wall, Building, init_db
 from flask_session import Session
 import s3_work
 import work_yolo as yolo
-
+import pathlib
 
 # 윈도우 운영체제에서 실행할 경우에는 아래 코드 한 줄 주석처리 해야 함.
 # pathlib.WindowsPath = pathlib.PosixPath

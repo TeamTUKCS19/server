@@ -6,8 +6,8 @@ import cv2
 import s3_work
 import os
 import datetime
-import mysql_query as sql
-import mysql_setup
+import mysql as sql
+
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 import calculate_crack as cal
@@ -19,7 +19,7 @@ Username = "admin"
 Database = "crack_database"
 Password = "teamtukcs19"
 
-conn, cursor = mysql_setup.connect_RDS(Host, Username, Password, Database, Port)
+conn, cursor = sql.connect_RDS(Host, Username, Password, Database, Port)
 
 # model_path = "/app/TUKproject/flask_api/best.pt"
 model_path = "weight/yolov8s_best2.pt"
@@ -117,14 +117,16 @@ def process_video(cap, location):
                                 s3_url_bbox = s3_work.upload_to_s3(processed_frame, filename_bbox)
 
                                 # db에 데이터 삽입
-                                sql.insert_building(cursor, building[building_id], side[side_id], real_width, risk, crack_id, formatted_date)
-                                sql.insert_location(cursor, crack_id, latitude, longitude, altitude)
-                                sql.insert_crackURL(cursor, crack_id, s3_url_cropped, s3_url_bbox)
+                                sql.insert_building(conn, cursor, building[building_id], side[side_id], real_width, risk, crack_id, formatted_date)
+                                sql.insert_location(conn, cursor, crack_id, latitude, longitude, altitude)
+                                sql.insert_crackURL(conn, cursor, crack_id, s3_url_cropped, s3_url_bbox)
 
                                 # s3_urls.append(s3_url)
                                 # save_to_db(latitude, longitude, altitude, real_width, risk, s3_url_cropped, s3_url_bbox)
                         # cropped_image = crop_crack_region(frame, results)
                 s3_url_bbox = s3_work.upload_to_s3(processed_frame, filename_bbox)
+    cursor.close()
+    conn.close()
     cap.release()
 
 
