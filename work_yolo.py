@@ -56,7 +56,7 @@ def process_video(cap, location, conn):
 
     latitude = location['latitude']
     longitude = location['longitude']
-    altitude = location['altitude']
+    altitude = 0.0
     building = {
         'A': 1,
         'B': 2,
@@ -139,7 +139,6 @@ def process_video(cap, location, conn):
                         # cropped_image = crop_crack_region(frame, results)
                     # s3_url_bbox = s3_work.upload_to_s3(processed_frame, filename_bbox)
     cursor.close()
-    conn.close()
     cap.release()
 
 

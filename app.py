@@ -67,7 +67,7 @@ def main_page():
     return render_template("Main_page.html")
 
 
-@app.route('/upload', methods=['POST'])
+@app.route('/upload_video', methods=['POST'])
 def upload():
     if 'file' not in request.files:
         return 'No file part', 400
@@ -76,9 +76,8 @@ def upload():
         return 'No selected file', 400
     if file:
         location = {
-            'latitude': request.files['latitude'],
-            'longitude': request.files['longitude'],
-            'altitude': request.files['altitude']
+            'latitude': request.form['latitude'],
+            'longitude': request.form['longitude']
         }
         video_path = os.path.join(yolo.SAVE_DIR, 'uploaded_video.mp4')
         file.save(video_path)
@@ -92,7 +91,7 @@ def upload():
         return 'File uploaded successfully', 200
 
 
-@app.route('/upload_video', methods=['POST'])
+@app.route('/upload_test', methods=['POST'])
 def upload_video():
     video_file = request.files['file']
     location = {
