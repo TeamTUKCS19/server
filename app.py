@@ -76,9 +76,9 @@ def upload():
         return 'No selected file', 400
     if file:
         location = {
-            'latitude': 32.0,
-            'longitude': 64.0,
-            'altitude': 12.0
+            'latitude': request.files['latitude'],
+            'longitude': request.files['longitude'],
+            'altitude': request.files['altitude']
         }
         video_path = os.path.join(yolo.SAVE_DIR, 'uploaded_video.mp4')
         file.save(video_path)
