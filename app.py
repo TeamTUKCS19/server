@@ -37,7 +37,7 @@ init_db(app)
 # DB와 연결
 def connect_RDS():
     conn = None
-    host = "crack-mysql.cjiec444ylcd.ap-northeast-2.rds.amazonaws.com"
+    host = "teamtukcs19db.cjiec444ylcd.ap-northeast-2.rds.amazonaws.com"
     port = 3306
     username = "admin"
     database = "crack_database"
